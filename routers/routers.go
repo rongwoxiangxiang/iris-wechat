@@ -7,8 +7,14 @@ import (
 )
 
 func Routes(app *iris.Application) {
-	app.Get("/", func(ctx iris.Context) {
-		ctx.Writef("Hello id")
+	app.Get("/{id:int}", func(ctx iris.Context) {
+		id, _ := ctx.Params().GetInt("id")
+		ctx.Writef("Hello id: %d", id)
 	})
 	mvc.New(app).Handle(new(controllers.UserController))
+
+	app.PartyFunc("/service/{flag:string}", func(r iris.Party) {
+		mvc.New(r).Handle(new(controllers.ServiceController))
+	})
+
 }

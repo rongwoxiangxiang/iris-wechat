@@ -10,5 +10,6 @@ import (
 func main() {
 	app := iris.New()
 	routers.Routes(app)
-	app.Run(config.Server())
+	config.InitConfig(app)
+	config.Run()
 }
