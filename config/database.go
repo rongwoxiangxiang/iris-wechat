@@ -1,23 +1,52 @@
 package config
 
 import (
+	"fmt"
 	"github.com/go-xorm/xorm"
-	"github.com/kataras/iris"
-	"github.com/kataras/iris/sessions/sessiondb/redis"
+	"log"
+	"strings"
 )
+
+type MysqlConfig struct {
+	Host string `yaml:"host"`
+	Port int64  `yaml:"port"`
+	User string `yaml:"user"`
+	Pass string `yaml:"pass"`
+	Name string `yaml:"name"`
+	Charset string `yaml:"charset"`
+	ShowSql bool `yaml:"showSql"`
+}
 
 var (
 	orm *xorm.Engine
+	dataSourceName string
 )
 
-func initDb(application *iris.Application)  {
+func initDb() {
 	var err error
-	orm, err = xorm.NewEngine("mysql", "root:Cs@229229@(cdb-n4dhxbt3.gz.tencentcdb.com:10085)/jwechat?charset=utf8")
-	orm.ShowSQL(true)
-	if err != nil {
-		application.Logger().Fatalf("orm failed to initialized: %v", err)
+	configs := GetConfigs()
+	if strings.ToLower(configs.DriverName) == "mysql" {
+		dataSourceName = getMysqlConfig(configs)
 	}
-	redisClient = redis.New() //可选择在redis服务器之间配置网桥
+	orm, err = xorm.NewEngine(configs.DriverName, dataSourceName)
+	orm.ShowSQL(configs.MysqlConfig.ShowSql)
+	if err != nil {
+		log.Fatalf("orm failed to initialized: %v", err)
+	}
+}
+
+func getMysqlConfig(configs *configs) string {
+	if configs.MysqlConfig.Charset == "" {
+		configs.MysqlConfig.Charset = "utf8"
+	}
+	return fmt.Sprintf("%s:%s@(%s:%d)/%s?charset=%s",
+		configs.MysqlConfig.User,
+		configs.MysqlConfig.Pass,
+		configs.MysqlConfig.Host,
+		configs.MysqlConfig.Port,
+		configs.MysqlConfig.Name,
+		configs.MysqlConfig.Charset,
+	)
 }
 
 func GetDb() *xorm.Engine {

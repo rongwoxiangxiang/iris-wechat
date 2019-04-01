@@ -1,9 +1,9 @@
 package main
 
 import (
+	"github.com/kataras/iris"
 	"iris/config"
 	"iris/routers"
-	"github.com/kataras/iris"
 )
 
 func main() {
