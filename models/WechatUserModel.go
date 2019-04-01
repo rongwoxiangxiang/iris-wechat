@@ -21,7 +21,7 @@ func (wu *WechatUserModel) TableName() string {
 }
 
 func (wu *WechatUserModel) Insert() (insertId int64, err error) {
-	insertId, err = config.Orm.InsertOne(wu)
+	insertId, err = config.GetDb().InsertOne(wu)
 	if err != nil {
 		err = common.ErrDataCreate
 	}
@@ -29,7 +29,7 @@ func (wu *WechatUserModel) Insert() (insertId int64, err error) {
 }
 
 func (wu *WechatUserModel) Update() (rows int64, err error){
-	rows, err = config.Orm.Id(wu.Id).Update(wu)
+	rows, err = config.GetDb().Id(wu.Id).Update(wu)
 	if err != nil {
 		err = common.ErrDataUpdate
 	}
@@ -41,7 +41,7 @@ func (wu *WechatUserModel) GetByOpenid() (user WechatUserModel, err error){
 		err = common.ErrDataGet
 		return
 	}
-	has, err := config.Orm.Where("wid= ? and openid = ?", wu.Wid, wu.Openid).Get(&user)
+	has, err := config.GetDb().Where("wid= ? and openid = ?", wu.Wid, wu.Openid).Get(&user)
 	if err != nil {
 		return WechatUserModel{},common.ErrDataGet
 	} else if has == false {
@@ -51,7 +51,7 @@ func (wu *WechatUserModel) GetByOpenid() (user WechatUserModel, err error){
 }
 
 func (wu *WechatUserModel) LimitUnderWidList(index int,limit int) (users []WechatUserModel) {
-	err := config.Orm.Where("wid = ?",wu.Wid).Limit(limit, (index - 1) * limit).Find(&users)
+	err := config.GetDb().Where("wid = ?",wu.Wid).Limit(limit, (index - 1) * limit).Find(&users)
 	if err != nil {
 		err = common.ErrDataFind
 	}
@@ -59,7 +59,7 @@ func (wu *WechatUserModel) LimitUnderWidList(index int,limit int) (users []Wecha
 }
 
 func (wu *WechatUserModel) DeleteById() bool{
-	_, err := config.Orm.Id(wu.Id).Unscoped().Delete(&WechatUserModel{})
+	_, err := config.GetDb().Id(wu.Id).Unscoped().Delete(&WechatUserModel{})
 	if err != nil{
 		return false
 	}

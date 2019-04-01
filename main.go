@@ -3,7 +3,6 @@ package main
 import (
 	"iris/config"
 	"iris/routers"
-	_"iris/routers"
 	"github.com/kataras/iris"
 )
 

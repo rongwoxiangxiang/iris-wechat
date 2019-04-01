@@ -18,6 +18,7 @@ type WechatModel struct {
 	Type  int8
 	Pass  int8
 	SaveInput int8
+	NeedSaveMen int8	//该公众号hander是否持久化
 	CreatedAt time.Time `orm:"auto_now_add;type(datetime)"`
 	UpdatedAt time.Time `orm:"auto_now;type(datetime)"`
 }
@@ -27,7 +28,7 @@ func (w *WechatModel) TableName() string {
 }
 
 func (w *WechatModel) Insert() (insertId int64, err error){
-	insertId, err = config.Orm.InsertOne(w)
+	insertId, err = config.GetDb().InsertOne(w)
 	if err != nil {
 		err = common.ErrDataCreate
 	}
@@ -37,7 +38,7 @@ func (w *WechatModel) Insert() (insertId int64, err error){
 func (w *WechatModel) GetById() (WechatModel, error){
 	if w.Id != 0{
 		wechat := WechatModel{Id : w.Id}
-		has, err := config.Orm.Get(&wechat)
+		has, err := config.GetDb().Get(&wechat)
 		if err != nil {
 			err = common.ErrDataGet
 		} else if has == false {
@@ -49,7 +50,7 @@ func (w *WechatModel) GetById() (WechatModel, error){
 }
 
 func (w *WechatModel) DeleteById() bool{
-	_, err := config.Orm.Id(w.Id).Unscoped().Delete(&WechatModel{})
+	_, err := config.GetDb().Id(w.Id).Unscoped().Delete(&WechatModel{})
 	if err != nil{
 		return false
 	}
@@ -57,16 +58,16 @@ func (w *WechatModel) DeleteById() bool{
 }
 
 func (w *WechatModel) FindByGid() (wechats []WechatModel) {
-	err := config.Orm.Where("gid = ?",w.Gid).Find(&wechats)
+	err := config.GetDb().Where("gid = ?",w.Gid).Find(&wechats)
 	if err != nil {
 		err = common.ErrDataFind
 	}
 	return wechats
 }
 
-func (w *WechatModel) FindByFlag() (WechatModel, error) {
+func (w *WechatModel) GetByFlag() (WechatModel, error) {
 	wechat := &WechatModel{}
-	has, err := config.Orm.Where("flag = ?",w.Flag).Get(wechat)
+	has, err := config.GetDb().Where("flag = ?",w.Flag).Get(wechat)
 	if err != nil {
 		err = common.ErrDataGet
 	} else if has == false {

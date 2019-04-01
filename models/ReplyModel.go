@@ -36,7 +36,7 @@ func (r *ReplyModel) TableName() string {
 }
 
 func (w *ReplyModel) Insert() (insertId int64, err error){
-	insertId, err = config.Orm.InsertOne(w)
+	insertId, err = config.GetDb().InsertOne(w)
 	if err != nil {
 		err = common.ErrDataCreate
 	}
@@ -46,7 +46,7 @@ func (w *ReplyModel) Insert() (insertId int64, err error){
 func (r *ReplyModel) GetById() (ReplyModel, error){
 	if r.Id != 0{
 		user := ReplyModel{Id : r.Id}
-		has, err := config.Orm.Get(&user)
+		has, err := config.GetDb().Get(&user)
 		if err != nil {
 			err = common.ErrDataGet
 		} else if has == false {
@@ -59,7 +59,7 @@ func (r *ReplyModel) GetById() (ReplyModel, error){
 }
 
 func (r *ReplyModel) DeleteById() bool{
-	_, err := config.Orm.Id(r.Id).Unscoped().Delete(&ReplyModel{})
+	_, err := config.GetDb().Id(r.Id).Unscoped().Delete(&ReplyModel{})
 	if err != nil{
 		return false
 	}
@@ -77,7 +77,7 @@ func (r *ReplyModel) FindOne() (reply ReplyModel) {
 	if "" == r.Alias && "" == r.ClickKey {
 		return
 	}
-	qs := config.Orm.Where("wid = ?",r.Wid)
+	qs := config.GetDb().Where("wid = ?",r.Wid)
 	if "" != r.Alias {
 		qs = qs.Where("alias = ?", r.Alias)
 	} else if "" != r.ClickKey {
@@ -91,7 +91,7 @@ func (r *ReplyModel) FindOne() (reply ReplyModel) {
 }
 
 func (r *ReplyModel) LimitUnderWidList(index int,limit int) (relpies []ReplyModel) {
-	err := config.Orm.Where("wid = ?",r.Wid).Limit(limit, (index - 1) * limit).Find(&relpies)
+	err := config.GetDb().Where("wid = ?",r.Wid).Limit(limit, (index - 1) * limit).Find(&relpies)
 	if err != nil {
 		err = common.ErrDataFind
 	}
