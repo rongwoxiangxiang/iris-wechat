@@ -6,6 +6,7 @@ import (
 	"github.com/kataras/iris"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	"log"
 	"os"
 )
 
@@ -45,13 +46,13 @@ func configuration() iris.Configurator {
 }
 
 func initYamlConfig()  {
-	data, err := ioutil.ReadFile(os.Getenv("GOPATH")+"\\src\\iris\\application.yml")
+	data, err := ioutil.ReadFile(os.Getenv("GOPATH")+"/src/iris/application.yml")
 	if err != nil {
-		fmt.Sprintln("error: %v", err)
+		log.Fatalf("error: %v", err)
 	}
 	err = yaml.Unmarshal([]byte(data), &conf)
 	if err != nil {
-		fmt.Sprintln("error: %v", err)
+		log.Fatalf("error: %v", err)
 	}
 }
 
