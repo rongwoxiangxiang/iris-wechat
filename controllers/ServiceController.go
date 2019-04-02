@@ -10,6 +10,8 @@ import (
 	"iris/common"
 	"iris/models"
 	"log"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -24,84 +26,160 @@ type Service struct {
 }
 
 var (
+	wxflag string
 	msgHandler core.Handler
 	msgServers  map[string]*Service
 )
 
-func (this *ServiceController) init() {
+func init() {
 	mux := core.NewServeMux()
-	mux.DefaultMsgHandleFunc(this.defaultMsgHandler)
-	mux.DefaultEventHandleFunc(this.defaultEventHandler)
-	mux.MsgHandleFunc(request.MsgTypeText, this.textMsgHandler)
-	mux.EventHandleFunc(menu.EventTypeClick, this.menuClickEventHandler)
+	mux.DefaultMsgHandleFunc(defaultMsgHandler)
+	mux.DefaultEventHandleFunc(defaultEventHandler)
+	mux.MsgHandleFunc(request.MsgTypeText, textMsgHandler)
+	mux.EventHandleFunc(menu.EventTypeClick, menuClickEventHandler)
 	msgHandler = mux
 	msgServers = make(map[string]*Service)
 }
 
-func (this *ServiceController) defaultMsgHandler(ctx *core.Context) {
+func defaultMsgHandler(ctx *core.Context) {
 	log.Printf("收到消息:\n%s\n", ctx.MsgPlaintext)
 	ctx.NoneResponse()
 }
 
-func (this *ServiceController) defaultEventHandler(ctx *core.Context) {
+func defaultEventHandler(ctx *core.Context) {
 	log.Printf("收到事件:\n%s\n", ctx.MsgPlaintext)
 	ctx.NoneResponse()
 }
 
-func (this *ServiceController) textMsgHandler(ctx *core.Context) {
+func textMsgHandler(ctx *core.Context) {
 	log.Printf("收到文本消息:\n%s\n", ctx.MsgPlaintext)
 	msg := request.GetText(ctx.MixedMsg)
-	reply := models.ReplyModel{Wid: this.getWidFromMsgServers(), Alias: msg.Content}
+	wxUser := getWechatUser(msg.FromUserName, ctx)
+	reply := (&models.ReplyModel{Wid: wxUser.Wid, Alias: msg.Content}).FindOne()
 	if reply.ActivityId == 0 {
 		return
 	}
-	resp := this.doReplyTextAndClick(reply, msg.MsgHeader)
+	resp := doReplyTextAndClick(reply, wxUser, msg.MsgHeader)
 	ctx.RawResponse(resp) // 明文回复
 	//ctx.AESResponse(resp, 0, "", nil) // aes密文回复
 }
 
-func (this *ServiceController) menuClickEventHandler(ctx *core.Context) {
+func menuClickEventHandler(ctx *core.Context) {
 	log.Printf("收到菜单 click 事件:\n%s\n", ctx.MsgPlaintext)
-
 	event := menu.GetClickEvent(ctx.MixedMsg)
-	reply := models.ReplyModel{Wid: this.getWidFromMsgServers(), ClickKey: event.EventKey}
+	wxUser := getWechatUser(event.FromUserName, ctx)
+	reply := (&models.ReplyModel{Wid: wxUser.Wid, ClickKey: event.EventKey}).FindOne()
 	if reply.ActivityId == 0 {
 		return
 	}
-	resp := this.doReplyTextAndClick(reply, event.MsgHeader)
+	resp := doReplyTextAndClick(reply, wxUser, event.MsgHeader)
 	//resp := response.NewText(event.FromUserName, event.ToUserName, event.CreateTime, "收到 click 类型的事件")
 	ctx.RawResponse(resp) // 明文回复
 	//ctx.AESResponse(resp, 0, "", nil) // aes密文回复
 }
 
-func (this *ServiceController) doReplyTextAndClick(reply models.ReplyModel, header core.MsgHeader) (msg interface{}) {
-	wxUser := this.getWechatUser(header.FromUserName, reply.Wid)
-	log.Print(wxUser)
+func doReplyTextAndClick(reply models.ReplyModel, wxUser models.WechatUserModel , header core.MsgHeader) (msg interface{}) {
 	switch reply.Type {
 	case models.REPLY_TYPE_TEXT:
-		return response.NewText(header.FromUserName, header.ToUserName, header.CreateTime, reply.Success)
+		return response.NewText(
+			header.FromUserName,
+			header.ToUserName,
+			header.CreateTime,
+			reply.Success)
 	case models.REPLY_TYPE_CODE:
-		//return doReplyCode()
+		return response.NewText(
+			header.FromUserName,
+			header.ToUserName,
+			header.CreateTime,
+			doReplyCode(reply, wxUser))
 	case models.REPLY_TYPE_LUCKY:
-		//return doReplyLucky()
+		return response.NewText(
+			header.FromUserName,
+			header.ToUserName,
+			header.CreateTime,
+			doReplyLucky(reply, wxUser))
 	case models.REPLY_TYPE_CHECKIN:
-		//return doReplyCheckin()
+		return response.NewText(
+			header.FromUserName,
+			header.ToUserName,
+			header.CreateTime,
+			doReplyCheckin(reply, wxUser))
 	}
 	return 
 }
 
-//func (this *ServiceController) doReplyCode()  {
-//
-//}
+func doReplyCode(reply models.ReplyModel, wxUser models.WechatUserModel) string {
+	history, _ := (&models.PrizeHistoryModel{ActivityId:reply.ActivityId, Wuid:wxUser.Id}).GetByActivityWuId()
+	if history.Prize != "" {
+		return strings.Replace(reply.Success, "%prize%", history.Prize, 1)
+	}
+	prize, err := (&models.PrizeModel{ActivityId:reply.ActivityId, Level:int8(models.PRIZE_LEVEL_DEFAULT), Used:common.NO_VALUE}).FindOneUsedPrize()
+	if err == common.ErrDataUnExist {
+		return reply.Fail
+	}
+	if prize.Code != "" {
+		_, err = (&models.PrizeHistoryModel{ActivityId:reply.ActivityId,Wuid:wxUser.Id,Prize:prize.Code}).Insert()
+		if err != nil {
+			return models.PLEASE_TRY_AGAIN
+		}
+		return strings.Replace(reply.Success, "%prize%", prize.Code, 1)
+	}
+	return models.PLEASE_TRY_AGAIN
+}
 
+func doReplyLucky(reply models.ReplyModel, wxUser models.WechatUserModel) string {
+	history, _ := (&models.PrizeHistoryModel{ActivityId:reply.ActivityId, Wuid:wxUser.Id}).GetByActivityWuId()
+	if history.Prize != "" {
+		return strings.Replace(reply.Success, "%prize%", history.Prize, 1)
+	}
 
-func(this *ServiceController) getWechatUser(openId string, wid int64) (wechatUser models.WechatUserModel) {
-	wechatUser.Wid = wid
+	luck, err := (&models.LotteryModel{Wid:reply.Wid, ActivityId:reply.ActivityId}).Luck()
+	if err == common.ErrLuckFinal {
+		return common.ErrLuckFinal.Msg
+	} else if err == common.ErrDataUnExist {
+		return reply.Fail
+	} else if err != nil {
+		return common.ErrLuckFail.Msg
+	}
+	if luck.Name != "" {
+		_, err = (&models.PrizeHistoryModel{ActivityId:reply.ActivityId, Wuid:wxUser.Id, Prize:luck.Name, Level:luck.Level}).Insert()
+	}
+	return strings.Replace(reply.Success, "%prize%", luck.Name, 1)
+}
+
+func doReplyCheckin(reply models.ReplyModel, wxUser models.WechatUserModel) string {
+	checkin, err := (&models.CheckinModel{ActivityId:reply.ActivityId, Wuid:wxUser.Id, Wid:wxUser.Wid}).GetCheckinByActivityWuid()
+	if err != nil {
+		return models.CHECK_FAIL
+	}
+	lastCheckinDate := checkin.Lastcheckin.Format("2006-01-02")
+	if lastCheckinDate == time.Now().Format("2006-01-02") {
+		return strings.
+			NewReplacer("%liner%",  strconv.FormatInt(checkin.Liner, 10), "%total%", strconv.FormatInt(checkin.Total, 10)).
+			Replace(reply.Success)
+	}
+	if lastCheckinDate == time.Now().Add(-24 * time.Hour).Format("2006-01-02"){//连续签到
+		checkin.Liner = checkin.Liner + 1
+	}
+	checkin.Total = checkin.Total + 1
+	checkin.Lastcheckin = time.Now()
+	_, err = checkin.Update()
+	if err != nil {
+		return models.CHECK_FAIL
+	}
+	return strings.
+		NewReplacer("%liner%", strconv.FormatInt(checkin.Liner, 10), "%total%", strconv.FormatInt(checkin.Total, 10)).
+		Replace(reply.Success)
+
+}
+
+func getWechatUser(openId string, ctx *core.Context) (wechatUser models.WechatUserModel) {
+	wechatUser.Wid = msgServers[wxflag].Wid
 	wechatUser.Openid = openId
 	wechatUser,_ = wechatUser.GetByOpenid()
 	go func(wechatUser models.WechatUserModel) {
-		if wechatUser.Openid != "" && wechatUser.UpdatedAt.After(time.Now().Add(-24 * time.Hour)) {
-			userInfo, err := user.Get(this.getWechatClient(), wechatUser.Openid, "")
+		if wechatUser.Openid != "" && time.Now().After(wechatUser.UpdatedAt.Add(-24 * time.Hour)) {
+			userInfo, err := user.Get(getWechatClient(wxflag), wechatUser.Openid, "")
 			if err == nil {
 				wechatUser.Nickname = userInfo.Nickname
 				wechatUser.Sex = userInfo.Sex
@@ -117,11 +195,7 @@ func(this *ServiceController) getWechatUser(openId string, wid int64) (wechatUse
 	return
 }
 
-func (this *ServiceController) setMsgServer() (msgServer *core.Server) {
-	flag := this.Ctx.Params().Get("flag")
-	if flag == "" {
-		return
-	}
+func setMsgServer(flag string) (msgServer *core.Server) {
 	if server, ok := msgServers[flag]; ok == true {
 		return server.Server
 	}
@@ -136,22 +210,18 @@ func (this *ServiceController) setMsgServer() (msgServer *core.Server) {
 	return
 }
 
-func (this *ServiceController) getWechatClient() *core.Client {
-	flag := this.Ctx.Params().Get("flag")
+func getWechatClient(flag string) *core.Client {
 	accessTokenServer := core.NewDefaultAccessTokenServer(msgServers[flag].AppId(), msgServers[flag].AppSecret, nil)
 	return core.NewClient(accessTokenServer, nil)
 }
 
-func (this *ServiceController) getWidFromMsgServers() int64 {
+func (this *ServiceController) GetIndex() {
 	flag := this.Ctx.Params().Get("flag")
 	if flag == "" {
-		return 0
+		return
 	}
-	return msgServers[flag].Wid
-}
-
-func (this *ServiceController) GetIndex() {
-	msgServer := this.setMsgServer()
+	wxflag = flag
+	msgServer := setMsgServer(flag)
 	msgServer.ServeHTTP(this.Ctx.ResponseWriter(), this.Ctx.Request(), nil)
 }
 
