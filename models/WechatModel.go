@@ -7,7 +7,7 @@ import (
 )
 
 type WechatModel struct {
-	Id int64
+	Id int64 `xorm:"pk"`
 	Gid int64
 	Name string
 	Appid string
@@ -19,8 +19,8 @@ type WechatModel struct {
 	Pass  int8
 	SaveInput int8
 	NeedSaveMen int8	//该公众号hander是否持久化
-	CreatedAt time.Time `orm:"auto_now_add;type(datetime)"`
-	UpdatedAt time.Time `orm:"auto_now;type(datetime)"`
+	CreatedAt time.Time `orm:"auto_now_add;type(datetime) created"`
+	UpdatedAt time.Time `orm:"auto_now;type(datetime) updated"`
 }
 
 func (w *WechatModel) TableName() string {
@@ -63,6 +63,17 @@ func (w *WechatModel) FindByGid() (wechats []WechatModel) {
 		err = common.ErrDataFind
 	}
 	return wechats
+}
+
+func (w *WechatModel) GetByAppid() (WechatModel, error) {
+	wechat := &WechatModel{Appid:w.Appid}
+	has, err := config.GetDb().Get(wechat)
+	if err != nil {
+		err = common.ErrDataGet
+	} else if has == false {
+		err = common.ErrDataEmpty
+	}
+	return *wechat,err
 }
 
 func (w *WechatModel) GetByFlag() (WechatModel, error) {

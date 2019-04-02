@@ -12,8 +12,14 @@ type WechatUserModel struct {
 	UserId  int64 `xorm:"user_id"`
 	Openid  string `xorm:"varchar(64)"`
 	Nickname string `xorm:"varchar(64)"`
-	CreatedAt time.Time `xorm:"created_at"`
-	UpdatedAt time.Time `xorm:"updated_at"`
+	Sex int
+	Province string `orm:"varchar(20)"`
+	City string `orm:"varchar(20)"`
+	Country string `orm:"varchar(20)"`
+	Language string `orm:"varchar(20)"`
+	Headimgurl string `orm:"varchar(200)"`
+	CreatedAt time.Time `orm:"created"`
+	UpdatedAt time.Time `orm:"updated"`
 }
 
 func (wu *WechatUserModel) TableName() string {
@@ -36,16 +42,37 @@ func (wu *WechatUserModel) Update() (rows int64, err error){
 	return
 }
 
+
+func (this *WechatUserModel) GetById() (WechatUserModel, error){
+	if this.Id != 0{
+		user := WechatUserModel{Id : this.Id}
+		has, err := config.GetDb().Get(&user)
+		if err != nil {
+			err = common.ErrDataGet
+		} else if has == false {
+			err = common.ErrDataEmpty
+		}
+		return user,err
+	}
+	return WechatUserModel{},common.ErrDataGet
+}
+
 func (wu *WechatUserModel) GetByOpenid() (user WechatUserModel, err error){
 	if wu.Openid == "" || wu.Wid == 0{
 		err = common.ErrDataGet
 		return
 	}
-	has, err := config.GetDb().Where("wid= ? and openid = ?", wu.Wid, wu.Openid).Get(&user)
+	user.Wid = wu.Wid
+	user.Openid = wu.Openid
+	has, err := config.GetDb().Get(&user)
 	if err != nil {
 		return WechatUserModel{},common.ErrDataGet
 	} else if has == false {
-		return WechatUserModel{},common.ErrDataEmpty
+		user.Id, err = user.Insert()
+		if err != nil {
+			return WechatUserModel{},common.ErrDataCreate
+		}
+		return user,nil
 	}
 	return
 }

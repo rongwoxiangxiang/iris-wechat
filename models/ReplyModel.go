@@ -16,7 +16,7 @@ const (
 const PLEASE_TRY_AGAIN = "活动太火爆了，请稍后重试"
 
 type ReplyModel struct {
-	Id  int64
+	Id  int64 `xorm:"pk"`
 	Wid int64
 	ActivityId int64
 	Alias string
@@ -27,8 +27,8 @@ type ReplyModel struct {
 	Type string
 	Disabled int8
 	Match int8
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	CreatedAt time.Time `orm:"auto_now_add;type(datetime) created"`
+	UpdatedAt time.Time `orm:"auto_now;type(datetime) updated"`
 }
 
 func (r *ReplyModel) TableName() string {
@@ -74,7 +74,7 @@ func (r *ReplyModel) DeleteById() bool{
  * @Success Reply
  */
 func (r *ReplyModel) FindOne() (reply ReplyModel) {
-	if "" == r.Alias && "" == r.ClickKey {
+	if r.Wid == 0 || ("" == r.Alias && "" == r.ClickKey) {
 		return
 	}
 	qs := config.GetDb().Where("wid = ?",r.Wid)
@@ -96,4 +96,29 @@ func (r *ReplyModel) LimitUnderWidList(index int,limit int) (relpies []ReplyMode
 		err = common.ErrDataFind
 	}
 	return relpies
+}
+
+func (r *ReplyModel) ChangeDisabledByWidActivityId(disabled int8) bool {
+	if r.Wid == 0 || r.ActivityId == 0 {
+		return false
+	}
+	reply := ReplyModel{Wid: r.Wid, ActivityId: r.ActivityId}
+	has, err := config.GetDb().Get(&reply)
+	if err != nil || has == false {
+		return false
+	}
+	reply.Disabled = disabled
+	_, err = config.GetDb().Id(reply.Id).Cols("disabled").Update(r)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+func (r *ReplyModel) Update() (rows int64, err error){
+	rows, err = config.GetDb().Id(r.Id).Update(r)
+	if err != nil {
+		err = common.ErrDataUpdate
+	}
+	return
 }
