@@ -42,6 +42,21 @@ func (wu *WechatUserModel) Update() (rows int64, err error){
 	return
 }
 
+
+func (this *WechatUserModel) GetById() (WechatUserModel, error){
+	if this.Id != 0{
+		user := WechatUserModel{Id : this.Id}
+		has, err := config.GetDb().Get(&user)
+		if err != nil {
+			err = common.ErrDataGet
+		} else if has == false {
+			err = common.ErrDataEmpty
+		}
+		return user,err
+	}
+	return WechatUserModel{},common.ErrDataGet
+}
+
 func (wu *WechatUserModel) GetByOpenid() (user WechatUserModel, err error){
 	if wu.Openid == "" || wu.Wid == 0{
 		err = common.ErrDataGet

@@ -180,10 +180,11 @@ func getWechatUser(openId string, ctx *core.Context) (wechatUser models.WechatUs
 	wechatUser.Openid = openId
 	wechatUser,_ = wechatUser.GetByOpenid()
 	go func(wechatUser models.WechatUserModel) {
-		if wechatUser.Openid != "" && time.Now().After(wechatUser.UpdatedAt.Add(-24 * time.Hour)) {
+		if wechatUser.Openid != "" && time.Now().After(wechatUser.UpdatedAt.Add(24 * time.Hour)) {
 			userInfo, err := user.Get(getWechatClient(wxflag), wechatUser.Openid, "")
 			if err == nil {
 				(&models.WechatUserModel{
+					Id:wechatUser.Id,
 					Nickname : userInfo.Nickname,
 					Sex : userInfo.Sex,
 					Province : userInfo.Province,
@@ -191,6 +192,7 @@ func getWechatUser(openId string, ctx *core.Context) (wechatUser models.WechatUs
 					Country : userInfo.Country,
 					Language : userInfo.Language,
 					Headimgurl : userInfo.HeadImageURL,
+					UpdatedAt : time.Now(),
 				}).Update()
 			}
 		}
