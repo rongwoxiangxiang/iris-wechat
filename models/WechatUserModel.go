@@ -12,6 +12,12 @@ type WechatUserModel struct {
 	UserId  int64 `xorm:"user_id"`
 	Openid  string `xorm:"varchar(64)"`
 	Nickname string `xorm:"varchar(64)"`
+	Sex int
+	Province string `orm:"varchar(20)"`
+	City string `orm:"varchar(20)"`
+	Country string `orm:"varchar(20)"`
+	Language string `orm:"varchar(20)"`
+	Headimgurl string `orm:"varchar(200)"`
 	CreatedAt time.Time `xorm:"created_at"`
 	UpdatedAt time.Time `xorm:"updated_at"`
 }
@@ -41,11 +47,17 @@ func (wu *WechatUserModel) GetByOpenid() (user WechatUserModel, err error){
 		err = common.ErrDataGet
 		return
 	}
-	has, err := config.GetDb().Where("wid= ? and openid = ?", wu.Wid, wu.Openid).Get(&user)
+	user.Wid = wu.Wid
+	user.Openid = wu.Openid
+	has, err := config.GetDb().Get(&user)
 	if err != nil {
 		return WechatUserModel{},common.ErrDataGet
 	} else if has == false {
-		return WechatUserModel{},common.ErrDataEmpty
+		user.Id, err = user.Insert()
+		if err != nil {
+			return WechatUserModel{},common.ErrDataCreate
+		}
+		return user,nil
 	}
 	return
 }

@@ -11,8 +11,6 @@ func Routes(app *iris.Application) {
 		id, _ := ctx.Params().GetInt("id")
 		ctx.Writef("Hello id: %d", id)
 	})
-	mvc.New(app).Handle(new(controllers.UserController))
-
 	app.PartyFunc("/service/{flag:string}", func(r iris.Party) {
 		mvc.New(r).Handle(new(controllers.ServiceController))
 	})

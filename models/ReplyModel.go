@@ -74,7 +74,7 @@ func (r *ReplyModel) DeleteById() bool{
  * @Success Reply
  */
 func (r *ReplyModel) FindOne() (reply ReplyModel) {
-	if "" == r.Alias && "" == r.ClickKey {
+	if r.Wid == 0 || ("" == r.Alias && "" == r.ClickKey) {
 		return
 	}
 	qs := config.GetDb().Where("wid = ?",r.Wid)
