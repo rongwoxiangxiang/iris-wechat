@@ -18,8 +18,8 @@ type WechatUserModel struct {
 	Country string `orm:"varchar(20)"`
 	Language string `orm:"varchar(20)"`
 	Headimgurl string `orm:"varchar(200)"`
-	CreatedAt time.Time `orm:"auto_now_add;type(datetime) created"`
-	UpdatedAt time.Time `orm:"auto_now;type(datetime) updated"`
+	CreatedAt time.Time `orm:"created"`
+	UpdatedAt time.Time `orm:"updated"`
 }
 
 func (wu *WechatUserModel) TableName() string {

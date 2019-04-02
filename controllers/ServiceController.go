@@ -59,7 +59,7 @@ func textMsgHandler(ctx *core.Context) {
 	if reply.ActivityId == 0 {
 		return
 	}
-	resp := doReplyTextAndClick(reply, wxUser, msg.MsgHeader)
+	resp := responseTextAndClick(reply, wxUser, msg.MsgHeader)
 	ctx.RawResponse(resp) // 明文回复
 	//ctx.AESResponse(resp, 0, "", nil) // aes密文回复
 }
@@ -72,13 +72,13 @@ func menuClickEventHandler(ctx *core.Context) {
 	if reply.ActivityId == 0 {
 		return
 	}
-	resp := doReplyTextAndClick(reply, wxUser, event.MsgHeader)
+	resp := responseTextAndClick(reply, wxUser, event.MsgHeader)
 	//resp := response.NewText(event.FromUserName, event.ToUserName, event.CreateTime, "收到 click 类型的事件")
 	ctx.RawResponse(resp) // 明文回复
 	//ctx.AESResponse(resp, 0, "", nil) // aes密文回复
 }
 
-func doReplyTextAndClick(reply models.ReplyModel, wxUser models.WechatUserModel , header core.MsgHeader) (msg interface{}) {
+func responseTextAndClick(reply models.ReplyModel, wxUser models.WechatUserModel , header core.MsgHeader) (msg interface{}) {
 	switch reply.Type {
 	case models.REPLY_TYPE_TEXT:
 		return response.NewText(
@@ -160,6 +160,8 @@ func doReplyCheckin(reply models.ReplyModel, wxUser models.WechatUserModel) stri
 	}
 	if lastCheckinDate == time.Now().Add(-24 * time.Hour).Format("2006-01-02"){//连续签到
 		checkin.Liner = checkin.Liner + 1
+	} else {//重置连续签到数
+		checkin.Liner = 1
 	}
 	checkin.Total = checkin.Total + 1
 	checkin.Lastcheckin = time.Now()
@@ -181,14 +183,15 @@ func getWechatUser(openId string, ctx *core.Context) (wechatUser models.WechatUs
 		if wechatUser.Openid != "" && time.Now().After(wechatUser.UpdatedAt.Add(-24 * time.Hour)) {
 			userInfo, err := user.Get(getWechatClient(wxflag), wechatUser.Openid, "")
 			if err == nil {
-				wechatUser.Nickname = userInfo.Nickname
-				wechatUser.Sex = userInfo.Sex
-				wechatUser.Province = userInfo.Province
-				wechatUser.City = userInfo.City
-				wechatUser.Country = userInfo.Country
-				wechatUser.Language = userInfo.Language
-				wechatUser.Headimgurl = userInfo.HeadImageURL
-				wechatUser.Update()
+				(&models.WechatUserModel{
+					Nickname : userInfo.Nickname,
+					Sex : userInfo.Sex,
+					Province : userInfo.Province,
+					City : userInfo.City,
+					Country : userInfo.Country,
+					Language : userInfo.Language,
+					Headimgurl : userInfo.HeadImageURL,
+				}).Update()
 			}
 		}
 	}(wechatUser)

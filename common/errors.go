@@ -3,7 +3,7 @@ package common
 import "fmt"
 
 const (
-	SUCCESS           = 200 //get put ok
+	SUCCESS           = 200
 )
 
 type Err struct {
@@ -24,7 +24,6 @@ var (
 
 )
 
-//模块错误码
 var (
 	ErrUserExist          = Err{Code: 100100, Msg: "用户已存在,请修改后重试。"}
 	ErrUserLogin          = Err{Code: 100101, Msg: "用户名或密码错误,请检查后重试。"}
@@ -35,7 +34,6 @@ var (
 	ErrDataFind           = Err{Code: 100204, Msg: "数据信息获取失败,请检查后重试。"}
 	ErrDataEmpty          = Err{Code: 100205, Msg: "数据信息不存在,请检查后重试。"}
 	ErrDataEmptyParams    = Err{Code: 100206, Msg: "缺少必要参数,请检查后重试。"}
-
 	ErrUserNoExist        = Err{Code: 10030, Msg: "用户不存在,请检查后重试。"}
 	ErrLuckFinal		  = Err{Code: 10040, Msg: "奖品已发放完毕。"}
 	ErrLuckFail		      = Err{Code: 10050, Msg: "活动太火爆了，请稍后重试。"}
