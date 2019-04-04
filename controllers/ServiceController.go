@@ -56,12 +56,15 @@ func textMsgHandler(ctx *core.Context) {
 	msg := request.GetText(ctx.MixedMsg)
 	wxUser := getWechatUser(msg.FromUserName)
 	reply := (&models.ReplyModel{Wid: wxUser.Wid, Alias: msg.Content}).FindOne()
-	if reply.ActivityId == 0 {
+	if reply.Success == "" {
 		return
 	}
 	resp := responseTextAndClick(reply, wxUser, msg.MsgHeader)
-	ctx.RawResponse(resp) // 明文回复
-	//ctx.AESResponse(resp, 0, "", nil) // aes密文回复
+	if len(ctx.AESKey) == 0 {
+		ctx.RawResponse(resp)
+		return
+	}
+	ctx.AESResponse(resp, 0, "", nil)
 }
 
 func menuClickEventHandler(ctx *core.Context) {
@@ -73,9 +76,11 @@ func menuClickEventHandler(ctx *core.Context) {
 		return
 	}
 	resp := responseTextAndClick(reply, wxUser, event.MsgHeader)
-	//resp := response.NewText(event.FromUserName, event.ToUserName, event.CreateTime, "收到 click 类型的事件")
-	ctx.RawResponse(resp) // 明文回复
-	//ctx.AESResponse(resp, 0, "", nil) // aes密文回复
+	if len(ctx.AESKey) == 0 {
+		ctx.RawResponse(resp)
+		return
+	}
+	ctx.AESResponse(resp, 0, "", nil)
 }
 
 func responseTextAndClick(reply models.ReplyModel, wxUser models.WechatUserModel, header core.MsgHeader) (msg interface{}) {
@@ -152,13 +157,12 @@ func doReplyCheckin(reply models.ReplyModel, wxUser models.WechatUserModel) stri
 	return strings.
 		NewReplacer("%liner%", strconv.FormatInt(checkin.Liner, 10), "%total%", strconv.FormatInt(checkin.Total, 10)).
 		Replace(reply.Success)
-
 }
 
 func doReplyLucky(reply models.ReplyModel, wxUser models.WechatUserModel) string {
 	activity, err := (&models.ActivityModel{Id:reply.ActivityId}).GetById()
 	now := time.Now()
-	if err != nil {
+	if err != nil || activity.TimeStarted.IsZero() || activity.TimeEnd.IsZero() {
 		return models.ACTIVITY_DATA_UNDEFINE
 	} else if now.Before(activity.TimeStarted){
 		return models.ACTIVITY_DATE_BEFORE
@@ -167,7 +171,10 @@ func doReplyLucky(reply models.ReplyModel, wxUser models.WechatUserModel) string
 	}
 	history, _ := (&models.PrizeHistoryModel{ActivityId: reply.ActivityId, Wuid: wxUser.Id}).GetByActivityWuId()
 	if activity.ActivityType == models.ACTIVITY_TYPE_LUCK_CHECKIN {//签到抽奖，验证签到条件是否满足
-		checkin, err := (&models.CheckinModel{ActivityId:reply.ActivityId,Wuid:wxUser.Id}).GetCheckinUserData()
+		if history.Prize != "" {
+			return strings.Replace(reply.Success, "%prize%", history.Prize, 1)
+		}
+		checkin, err := (&models.CheckinModel{ActivityId:activity.RelativeId,Wuid:wxUser.Id}).GetCheckinUserData()
 		if err != nil {
 			return reply.Fail
 		}
@@ -178,11 +185,12 @@ func doReplyLucky(reply models.ReplyModel, wxUser models.WechatUserModel) string
 		if history.CreatedAt.Format("2006-01-02") == time.Now().Format("2006-01-02") {
 			return strings.Replace(reply.Success, "%prize%", history.Prize, 1)
 		}
-		history = models.PrizeHistoryModel{}
+	} else {
+		if history.Prize != "" {
+			return strings.Replace(reply.Success, "%prize%", history.Prize, 1)
+		}
 	}
-	if history.Prize != "" {
-		return strings.Replace(reply.Success, "%prize%", history.Prize, 1)
-	}
+
 	luck, err := (&models.LotteryModel{Wid:reply.Wid, ActivityId:reply.ActivityId}).Luck()
 	if err == common.ErrLuckFinal {
 		return common.ErrLuckFinal.Msg
@@ -202,7 +210,7 @@ func getWechatUser(openId string) (wechatUser models.WechatUserModel) {
 	wechatUser.Openid = openId
 	wechatUser,_ = wechatUser.GetByOpenid()
 	go func(wechatUser models.WechatUserModel) {
-		if wechatUser.Openid != "" && time.Now().After(wechatUser.UpdatedAt.Add(24 * time.Hour)) {
+		if wechatUser.Openid != "" && (wechatUser.UpdatedAt.IsZero() || time.Now().After(wechatUser.UpdatedAt.Add(24 * time.Hour))) {
 			userInfo, err := user.Get(getWechatClient(wxflag), wechatUser.Openid, "")
 			if err == nil {
 				(&models.WechatUserModel{
