@@ -11,6 +11,7 @@ type PrizeHistoryModel struct {
 	ActivityId int64
 	Wuid int64
 	Prize string
+	Code string
 	Level int8
 	CreatedAt time.Time `orm:"auto_now_add;type(datetime) created"`
 }
