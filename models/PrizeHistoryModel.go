@@ -29,7 +29,7 @@ func (this *PrizeHistoryModel) Insert() (insertId int64, err error){
 
 func (this *PrizeHistoryModel) GetByActivityWuId() (PrizeHistoryModel, error){
 	history := PrizeHistoryModel{ActivityId : this.ActivityId, Wuid:this.Wuid}
-	has, err := config.GetDb().Get(&history)
+	has, err := config.GetDb().Desc("id").Get(&history)
 	if err != nil {
 		err = common.ErrDataGet
 	} else if has == false {

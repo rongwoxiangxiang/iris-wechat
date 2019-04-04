@@ -51,6 +51,37 @@ func (this *CheckinModel) List() (lotteries []CheckinModel) {
 	return lotteries
 }
 
+/**
+ * @GetCheckinByActivityWuid
+ * @Description 活动用户签到信息
+ * @Param id ActivityId
+ * @Param id Wuid
+ * @return CheckinModel,error
+ */
+func (this *CheckinModel) GetCheckinUserData() (checkin CheckinModel, err error){
+	if this.ActivityId == 0 || this.Wuid == 0{
+		err = common.ErrDataGet
+		return
+	}
+	checkin.ActivityId = this.ActivityId
+	checkin.Wuid = this.Wuid
+	has, err := config.GetDb().Get(&checkin)
+	if err != nil {
+		return CheckinModel{},common.ErrDataGet
+	} else if has == false {
+		return CheckinModel{},common.ErrDataEmpty
+	}
+	return
+}
+
+/**
+ * @GetCheckinByActivityWuid
+ * @Description 活动用户签到信息，不存在自动创建
+ * @Param id ActivityId
+ * @Param id Wuid
+ * @Param id Wid
+ * @return CheckinModel,error
+ */
 func (this *CheckinModel) GetCheckinByActivityWuid() (checkin CheckinModel, err error){
 	if this.ActivityId == 0 || this.Wuid == 0 || this.Wid == 0{
 		err = common.ErrDataGet
