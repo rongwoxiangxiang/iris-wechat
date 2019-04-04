@@ -27,6 +27,7 @@ type ActivityModel struct {
 	Name  string
 	Desc  string
 	ActivityType int8
+	RelativeId int64
 	Extra string
 	TimeStarted time.Time
 	TimeEnd time.Time
