@@ -22,7 +22,8 @@ type ReplyModel struct {
 	Alias string
 	ClickKey string
 	Success string
-	Fail string
+	Fail string			//活动数据不存在，未找到等报错是返回信息
+	NoPrizeReturn string
 	Extra string
 	Type string
 	Disabled int8
@@ -108,7 +109,7 @@ func (r *ReplyModel) ChangeDisabledByWidActivityId(disabled int8) bool {
 		return false
 	}
 	reply.Disabled = disabled
-	_, err = config.GetDb().Id(reply.Id).Cols("disabled").Update(r)
+	_, err = config.GetDb().Id(reply.Id).Cols("disabled").Update(reply)
 	if err != nil {
 		return false
 	}

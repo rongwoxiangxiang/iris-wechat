@@ -6,13 +6,28 @@ import (
 	"time"
 )
 
+const (
+	ACTIVITY_DATA_UNDEFINE = "活动信息不存在！"
+	ACTIVITY_DATE_BEFORE   = "活动未开始！"
+	ACTIVITY_DATE_AFTER    = "活动已结束！"
+)
+
+const (
+	ACTIVITY_TYPE_LUCK_DIRECT   = 11 //直接抽奖,单次
+	ACTIVITY_TYPE_LUCK_CHECKIN  = 12 //签到抽奖，签到固定天数后抽奖
+	ACTIVITY_TYPE_LUCK_EVERYDAY = 13 //每日抽奖，每天一次
+
+	ACTIVITY_TYPE_CODE 			= 21 //直接发放奖励
+	ACTIVITY_TYPE_CHECKIN 		= 31 //签到
+)
+
 type ActivityModel struct {
 	Id  int64 `xorm:"pk"`
 	Wid int64
 	Name  string
 	Desc  string
-	Type int8
-	events string
+	ActivityType int8
+	Extra string
 	TimeStarted time.Time
 	TimeEnd time.Time
 	CreatedAt time.Time `orm:"auto_now_add;type(datetime) created"`
@@ -32,7 +47,7 @@ func (this *ActivityModel) GetById() (ActivityModel, error){
 		} else if has == false {
 			err = common.ErrDataEmpty
 		}
-		return activity,err
+		return activity, err
 	}
 	return ActivityModel{},common.ErrDataGet
 }

@@ -78,8 +78,7 @@ func (this *LotteryModel) Luck() (lottery LotteryModel, err error) {
 		max -= lot.Probability
 	}
 	if actvityFinished {//全部奖品发放完毕，自动结束活动
-		(&ReplyModel{Wid: this.Wid, ActivityId: this.ActivityId, Disabled: common.YES_VALUE}).
-			ChangeDisabledByWidActivityId(common.YES_VALUE)
+		(&ReplyModel{Wid: this.Wid, ActivityId: this.ActivityId}).ChangeDisabledByWidActivityId(common.YES_VALUE)
 		err = common.ErrLuckFinal
 		return
 	}
