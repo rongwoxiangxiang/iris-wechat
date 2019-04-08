@@ -9,7 +9,9 @@ import (
 	"github.com/kataras/iris"
 	"iris/common"
 	"iris/models"
+	"iris/modules/ai"
 	"log"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +31,7 @@ var (
 	wxflag string
 	msgHandler core.Handler
 	msgServers  map[string]*Service
+	aiService *ai.Ai
 )
 
 func init() {
@@ -39,10 +42,22 @@ func init() {
 	mux.EventHandleFunc(menu.EventTypeClick, menuClickEventHandler)
 	msgHandler = mux
 	msgServers = make(map[string]*Service)
+	aiService.SetAiServer()
 }
 
 func defaultMsgHandler(ctx *core.Context) {
-	log.Printf("收到消息:\n%s\n", ctx.MsgPlaintext)
+	log.Printf("收到消息:\n%s\n", )
+	msg := request.GetText(ctx.MixedMsg)
+	answer := aiService.NlpTextchat(&http.Client{}, msg.Content, msg.FromUserName)
+	if answer.AnswerData != "" {
+		resp := response.NewText(msg.MsgHeader.FromUserName, msg.MsgHeader.ToUserName, msg.MsgHeader.CreateTime, answer.AnswerData)
+		if len(ctx.AESKey) == 0 {
+			ctx.RawResponse(resp)
+			return
+		}
+		ctx.AESResponse(resp, 0, "", nil)
+		return
+	}
 	ctx.NoneResponse()
 }
 

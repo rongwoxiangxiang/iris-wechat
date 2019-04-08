@@ -20,6 +20,7 @@ type configs struct {
 	DriverName string `yaml:"driverName"`
 	MysqlConfig *MysqlConfig `yaml:"database"`
 	RedisConfig *RedisConfig `yaml:"redis"`
+	OtherConfigs *OtherConfigs `yaml:"others"`
 }
 
 var (
