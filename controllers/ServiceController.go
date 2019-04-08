@@ -221,7 +221,10 @@ func doReplyLucky(reply models.ReplyModel, wxUser models.WechatUserModel) string
 	}
 	var prize models.PrizeModel
 	if luck.FirstCodeId != 0 {//表示存在礼包码
-		prize, _ = (&models.PrizeModel{ActivityId:reply.ActivityId, Level:luck.Level}).GetOneUsedPrize(luck.FirstCodeId)
+		prize, err = (&models.PrizeModel{ActivityId:reply.ActivityId, Level:luck.Level}).GetOneUsedPrize(luck.FirstCodeId)
+		if err == common.ErrDataUnExist {
+			return models.PLEASE_TRY_AGAIN
+		}
 	}
 	if luck.Name != "" {
 		(&models.PrizeHistoryModel{ActivityId:reply.ActivityId, Wuid:wxUser.Id, Prize:luck.Name, Code:prize.Code, Level:luck.Level}).Insert()
