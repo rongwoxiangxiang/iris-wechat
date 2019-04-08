@@ -9,6 +9,5 @@ import (
 func main() {
 	app := iris.New()
 	routers.Routes(app)
-	config.InitConfig(app)
-	config.Run()
+	config.Run(app)
 }
