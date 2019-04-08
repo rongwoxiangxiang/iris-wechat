@@ -9,7 +9,9 @@ import (
 	"github.com/kataras/iris"
 	"iris/common"
 	"iris/models"
+	"iris/modules/ai"
 	"log"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -35,19 +37,37 @@ func init() {
 	mux := core.NewServeMux()
 	mux.DefaultMsgHandleFunc(defaultMsgHandler)
 	mux.DefaultEventHandleFunc(defaultEventHandler)
-	mux.MsgHandleFunc(request.MsgTypeText, textMsgHandler)
+	mux.MsgHandleFunc(request.MsgTypeText, textMsgHandler, defaultTextMsgHandler)
 	mux.EventHandleFunc(menu.EventTypeClick, menuClickEventHandler)
 	msgHandler = mux
 	msgServers = make(map[string]*Service)
 }
 
 func defaultMsgHandler(ctx *core.Context) {
-	log.Printf("收到消息:\n%s\n", ctx.MsgPlaintext)
+	log.Printf("收到消息:\n%s\n", )
 	ctx.NoneResponse()
 }
 
 func defaultEventHandler(ctx *core.Context) {
 	log.Printf("收到事件:\n%s\n", ctx.MsgPlaintext)
+	ctx.NoneResponse()
+}
+
+func defaultTextMsgHandler(ctx *core.Context) {
+	log.Printf("AI智能闲聊:\n%s\n", ctx.MsgPlaintext)
+	msg := request.GetText(ctx.MixedMsg)
+	aiService := ai.Ai{}
+	aiService.SetAiServer()
+	answer := aiService.NlpTextchat(&http.Client{}, msg.Content, msg.FromUserName)
+	if answer.AnswerData != "" {
+		resp := response.NewText(msg.MsgHeader.FromUserName, msg.MsgHeader.ToUserName, msg.MsgHeader.CreateTime, answer.AnswerData)
+		if len(ctx.AESKey) == 0 {
+			ctx.RawResponse(resp)
+			return
+		}
+		ctx.AESResponse(resp, 0, "", nil)
+		return
+	}
 	ctx.NoneResponse()
 }
 
@@ -115,24 +135,24 @@ func responseTextAndClick(reply models.ReplyModel, wxUser models.WechatUserModel
 
 func doReplyCode(reply models.ReplyModel, wxUser models.WechatUserModel) string {
 	history, _ := (&models.PrizeHistoryModel{ActivityId:reply.ActivityId, Wuid:wxUser.Id}).GetByActivityWuId()
-	if history.Prize != "" {
-		return strings.Replace(reply.Success, "%prize%", history.Prize, 1)
+	if history.Code != "" {
+		return strings.Replace(reply.Success, "%code%", history.Code, 1)
 	}
-	prize, err := (&models.PrizeModel{ActivityId:reply.ActivityId, Level:int8(models.PRIZE_LEVEL_DEFAULT), Used:common.NO_VALUE}).FindOneUsedPrize()
+	prize, err := (&models.PrizeModel{ActivityId:reply.ActivityId, Level:int8(models.PRIZE_LEVEL_DEFAULT)}).GetOneUsedPrize(0)
 	if err == common.ErrDataUnExist {
 		return reply.NoPrizeReturn
 	}
 	if prize.Code != "" {
-		_, err = (&models.PrizeHistoryModel{ActivityId:reply.ActivityId,Wuid:wxUser.Id,Prize:prize.Code}).Insert()
+		_, err = (&models.PrizeHistoryModel{ActivityId:reply.ActivityId, Wuid:wxUser.Id, Code:prize.Code}).Insert()
 		if err != nil {
 			return models.PLEASE_TRY_AGAIN
 		}
-		return strings.Replace(reply.Success, "%prize%", prize.Code, 1)
+		return strings.Replace(reply.Success, "%code%", prize.Code, 1)
 	}
 	return models.PLEASE_TRY_AGAIN
 }
 
-func doReplyCheckin(reply models.ReplyModel, wxUser models.WechatUserModel) string {
+func doReplyCheckin(reply models.ReplyModel, wxUser models.WechatUserModel) string 	{
 	checkin, err := (&models.CheckinModel{ActivityId:reply.ActivityId, Wuid:wxUser.Id, Wid:wxUser.Wid}).GetCheckinByActivityWuid()
 	if err != nil {
 		return models.CHECK_FAIL
@@ -172,7 +192,7 @@ func doReplyLucky(reply models.ReplyModel, wxUser models.WechatUserModel) string
 	history, _ := (&models.PrizeHistoryModel{ActivityId: reply.ActivityId, Wuid: wxUser.Id}).GetByActivityWuId()
 	if activity.ActivityType == models.ACTIVITY_TYPE_LUCK_CHECKIN {//签到抽奖，验证签到条件是否满足
 		if history.Prize != "" {
-			return strings.Replace(reply.Success, "%prize%", history.Prize, 1)
+			return strings.NewReplacer("%prize%",  history.Prize, "%code%", history.Code).Replace(reply.Success)
 		}
 		checkin, err := (&models.CheckinModel{ActivityId:activity.RelativeId,Wuid:wxUser.Id}).GetCheckinUserData()
 		if err != nil {
@@ -183,11 +203,11 @@ func doReplyLucky(reply models.ReplyModel, wxUser models.WechatUserModel) string
 		}
 	} else if activity.ActivityType == models.ACTIVITY_TYPE_LUCK_EVERYDAY {//每日抽奖，验证今日是否已经获取
 		if history.CreatedAt.Format("2006-01-02") == time.Now().Format("2006-01-02") {
-			return strings.Replace(reply.Success, "%prize%", history.Prize, 1)
+			return strings.NewReplacer("%prize%",  history.Prize, "%code%", history.Code).Replace(reply.Success)
 		}
 	} else {
 		if history.Prize != "" {
-			return strings.Replace(reply.Success, "%prize%", history.Prize, 1)
+			return strings.NewReplacer("%prize%",  history.Prize, "%code%", history.Code).Replace(reply.Success)
 		}
 	}
 
@@ -199,10 +219,17 @@ func doReplyLucky(reply models.ReplyModel, wxUser models.WechatUserModel) string
 	} else if err != nil {
 		return common.ErrLuckFail.Msg
 	}
-	if luck.Name != "" {
-		_, err = (&models.PrizeHistoryModel{ActivityId:reply.ActivityId, Wuid:wxUser.Id, Prize:luck.Name, Level:luck.Level}).Insert()
+	var prize models.PrizeModel
+	if luck.FirstCodeId != 0 {//表示存在礼包码
+		prize, err = (&models.PrizeModel{ActivityId:reply.ActivityId, Level:luck.Level}).GetOneUsedPrize(luck.FirstCodeId)
+		if err == common.ErrDataUnExist {
+			return models.PLEASE_TRY_AGAIN
+		}
 	}
-	return strings.Replace(reply.Success, "%prize%", luck.Name, 1)
+	if luck.Name != "" {
+		(&models.PrizeHistoryModel{ActivityId:reply.ActivityId, Wuid:wxUser.Id, Prize:luck.Name, Code:prize.Code, Level:luck.Level}).Insert()
+	}
+	return strings.NewReplacer("%prize%",  luck.Name, "%code%", prize.Code).Replace(reply.Success)
 }
 
 func getWechatUser(openId string) (wechatUser models.WechatUserModel) {

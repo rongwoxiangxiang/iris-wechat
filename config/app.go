@@ -20,21 +20,21 @@ type configs struct {
 	DriverName string `yaml:"driverName"`
 	MysqlConfig *MysqlConfig `yaml:"database"`
 	RedisConfig *RedisConfig `yaml:"redis"`
+	OtherConfigs *OtherConfigs `yaml:"others"`
 }
 
 var (
-	application *iris.Application
     conf *configs
 )
 
-func InitConfig(app *iris.Application) {
-	application = app
+func init()  {
 	initYamlConfig()
 	initDb()
 }
 
-func Run()  {
-	application.Run(runner(), configuration())
+
+func Run(app *iris.Application)  {
+	app.Run(runner(), configuration())
 }
 
 func runner() iris.Runner {

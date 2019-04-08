@@ -25,9 +25,12 @@ func (this *PrizeModel) TableName() string {
 	return "prizes"
 }
 
-func (this *PrizeModel) FindOneUsedPrize() (prize PrizeModel,err error) {
-	prize = PrizeModel{ActivityId: this.ActivityId, Level: this.Level, Used: common.NO_VALUE}
-	has, err := config.GetDb().Get(&prize)
+func (this *PrizeModel) GetOneUsedPrize(idGt int64) (prize PrizeModel,err error) {
+	qs := config.GetDb()
+	if idGt > 0 {
+		qs.Where("id >= ?", idGt)
+	}
+	has, err := qs.Where("activity_id = ? AND level = ? AND used = ?", this.ActivityId, this.Level, common.NO_VALUE).Get(&prize)
 	if err != nil || has == false {
 		err = common.ErrDataUnExist
 		return
