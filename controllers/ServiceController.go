@@ -74,7 +74,7 @@ func defaultTextMsgHandler(ctx *core.Context) {
 func textMsgHandler(ctx *core.Context) {
 	log.Printf("收到文本消息:\n%s\n", ctx.MsgPlaintext)
 	msg := request.GetText(ctx.MixedMsg)
-	wxUser := getWechatUser(msg.FromUserName)
+	wxUser := getWechatUser(msg.FromUserName, ctx.MixedMsg)
 	reply := (&models.ReplyModel{Wid: wxUser.Wid, Alias: msg.Content}).FindOne()
 	if reply.Success == "" {
 		return
@@ -90,7 +90,7 @@ func textMsgHandler(ctx *core.Context) {
 func menuClickEventHandler(ctx *core.Context) {
 	log.Printf("收到菜单 click 事件:\n%s\n", ctx.MsgPlaintext)
 	event := menu.GetClickEvent(ctx.MixedMsg)
-	wxUser := getWechatUser(event.FromUserName)
+	wxUser := getWechatUser(event.FromUserName, ctx.MixedMsg)
 	reply := (&models.ReplyModel{Wid: wxUser.Wid, ClickKey: event.EventKey}).FindOne()
 	if reply.ActivityId == 0 {
 		return
@@ -232,11 +232,17 @@ func doReplyLucky(reply models.ReplyModel, wxUser models.WechatUserModel) string
 	return strings.NewReplacer("%prize%",  luck.Name, "%code%", prize.Code).Replace(reply.Success)
 }
 
-func getWechatUser(openId string) (wechatUser models.WechatUserModel) {
+func getWechatUser(openId string, msg *core.MixedMsg) (wechatUser models.WechatUserModel) {
 	wechatUser.Wid = msgServers[wxflag].Wid
 	wechatUser.Openid = openId
 	wechatUser,_ = wechatUser.GetByOpenid()
-	go func(wechatUser models.WechatUserModel) {
+	go func(wechatUser models.WechatUserModel, msg *core.MixedMsg) {
+		(&models.RecordModel{
+			Wid:wechatUser.Wid,
+			Wuid:wechatUser.Id,
+			Type: string(msg.MsgType) + string(msg.EventType),
+			Content: msg.Content + msg.EventKey + msg.MediaId,
+		}).Insert()//存储用户操作
 		if wechatUser.Openid != "" && (wechatUser.UpdatedAt.IsZero() || time.Now().After(wechatUser.UpdatedAt.Add(24 * time.Hour))) {
 			userInfo, err := user.Get(getWechatClient(wxflag), wechatUser.Openid, "")
 			if err == nil {
@@ -253,7 +259,7 @@ func getWechatUser(openId string) (wechatUser models.WechatUserModel) {
 				}).Update()
 			}
 		}
-	}(wechatUser)
+	}(wechatUser, msg)
 	return
 }
 
