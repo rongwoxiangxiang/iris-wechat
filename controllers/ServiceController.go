@@ -92,7 +92,7 @@ func menuClickEventHandler(ctx *core.Context) {
 	event := menu.GetClickEvent(ctx.MixedMsg)
 	wxUser := getWechatUser(event.FromUserName, ctx.MixedMsg)
 	reply := (&models.ReplyModel{Wid: wxUser.Wid, ClickKey: event.EventKey}).FindOne()
-	if reply.ActivityId == 0 {
+	if reply.Success == "" {
 		return
 	}
 	resp := responseTextAndClick(reply, wxUser, event.MsgHeader)

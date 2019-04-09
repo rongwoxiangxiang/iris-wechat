@@ -17,3 +17,5 @@ others:
   ai:
     qq_ai_app_id: qq_ai_app_id
     qq_ai_app_key: qq_ai_app_key
+  es:
+    Host: 127.0.0.1:9200
