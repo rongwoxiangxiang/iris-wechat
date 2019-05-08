@@ -15,7 +15,7 @@ var client *elastic.Client
 
 func init()  {
 	var err error
-	host := config.GetConfigs().OtherConfigs.ElasticSearchServer.Host
+	host := config.GetConfigs().OthersConfig.ElasticSearchServerConfig.Host
 	if host == "" {
 		log.Fatalf("es init fail [0]: config host never gotten")
 	}

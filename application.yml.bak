@@ -1,7 +1,6 @@
 service:
   host: 0.0.0.0
   port: 8080
-driverName: mysql
 database:
   host: 127.0.0.1
   port: 3306
@@ -14,8 +13,9 @@ redis:
   port: 6379
   maxActive: 10
 others:
-  ai:
-    qq_ai_app_id: qq_ai_app_id
-    qq_ai_app_key: qq_ai_app_key
-  es:
-    Host: 127.0.0.1:9200
+  elsticsearch:
+    host: 127.0.0.1
+    port: 9200
+  qqai:
+    qq_ai_app_id: 123456
+    qq_ai_app_key: 321654
