@@ -1,13 +1,7 @@
 package main
 
-import (
-	"github.com/kataras/iris"
-	"iris/config"
-	"iris/routers"
-)
+import "iris/bootstrap"
 
 func main() {
-	app := iris.New()
-	routers.Routes(app)
-	config.Run(app)
+	bootstrap.Run()
 }

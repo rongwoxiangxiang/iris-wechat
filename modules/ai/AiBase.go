@@ -26,8 +26,8 @@ type AiBase struct {
 }
 
 func (this *AiBase) SetAiServer(){
-	this.app_id = config.GetConfigs().OtherConfigs.QQAiServer.AppId
-	this.app_key = config.GetConfigs().OtherConfigs.QQAiServer.AppKey
+	this.app_id = config.GetConfigs().OthersConfig.QQAiServerConfig.AppId
+	this.app_key = config.GetConfigs().OthersConfig.QQAiServerConfig.AppKey
 }
 
 

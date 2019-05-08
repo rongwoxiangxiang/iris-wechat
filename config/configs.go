@@ -1,11 +1,26 @@
 package config
 
-//其他配置
-type OtherConfigs struct {
-	*QQAiServer  `yaml:"ai"`
+type configs struct {
+	ServiceConfig  *ServiceConfig `yaml:"service"`
+	DataBaseConfig *DataBaseConfig `yaml:"database"`
+	RedisConfig  *RedisConfig `yaml:"redis"`
+	OthersConfig *OthersConfig  `yaml:"others"`
 }
 
-type QQAiServer struct {
-	AppId string `yaml:"qq_ai_app_id"`
-	AppKey string  `yaml:"qq_ai_app_key"`
+var (
+	local_conf *configs
+)
+
+func GetConfigs() *configs {
+	if local_conf == nil {
+		getDefaultConfigs()
+	}
+	return local_conf
+}
+
+func getDefaultConfigs(){
+	local_conf = new(configs)
+	setServiceConfigDefault()
+	setDataBaseConfigDefault()
+	setCacheConfigDefault()
 }

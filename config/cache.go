@@ -7,6 +7,7 @@ import (
 	"github.com/kataras/iris/sessions/sessiondb/redis/service"
 	"time"
 )
+
 type RedisConfig struct {
 	Host string `yaml:"host"`
 	Port string `yaml:"port"`
@@ -18,17 +19,21 @@ type RedisConfig struct {
 	Prefix string `yaml:"prefix"`
 }
 
+func setCacheConfigDefault()  {
+	local_conf.RedisConfig = &RedisConfig{Host: "127.0.0.1", Port: "6379"}
+}
 
 var (
 	redisClient *redis.Database
 )
 
 func CacheSet(key string, value interface{}, expire time.Duration)  {
-	GetRedisClient().Set("wechat",sessions.LifeTime{Time: time.Now().Add(expire * time.Second)} , key, value, false)
+	GetRedisClient().Set(local_conf.RedisConfig.Prefix,
+		sessions.LifeTime{Time: time.Now().Add(expire * time.Second)} , key, value, false)
 }
 
 func CacheGet(key string) (value interface{}) {
-	return GetRedisClient().Get("wechat", key)
+	return GetRedisClient().Get(local_conf.RedisConfig.Prefix, key)
 }
 
 func GetRedisClient() *redis.Database {
