@@ -2,17 +2,14 @@ module iris
 
 go 1.12
 
-replace golang.org/x/net => github.com/golang/net v0.0.0-20190503192946-f4e77d36d62c
-
-replace golang.org/x/text => github.com/golang/text v0.3.2
-
-replace golang.org/x/crypto => github.com/golang/crypto v0.0.0-20190506204251-e1dfcc566284
-
-replace golang.org/x/sys => github.com/golang/sys v0.0.0-20190508220229-2d0786266e9c
-
-replace golang.org/x/tools => github.com/golang/tools v0.0.0-20190509014725-d996b19ee77c
-
-replace golang.org/x/sync => github.com/golang/sync v0.0.0-20190423024810-112230192c58
+replace (
+		golang.org/x/net => github.com/golang/net v0.0.0-20190503192946-f4e77d36d62c
+		golang.org/x/text => github.com/golang/text v0.3.2
+		golang.org/x/crypto => github.com/golang/crypto v0.0.0-20190506204251-e1dfcc566284
+		golang.org/x/sys => github.com/golang/sys v0.0.0-20190508220229-2d0786266e9c
+		golang.org/x/tools => github.com/golang/tools v0.0.0-20190509014725-d996b19ee77c
+		golang.org/x/sync => github.com/golang/sync v0.0.0-20190423024810-112230192c58
+)
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
